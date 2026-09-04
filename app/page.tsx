@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Analytics } from "@vercel/analytics/next"
 
 const ALL_FORMATS = ['png', 'jpg', 'webp'];
 
@@ -66,6 +67,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-purple-900 via-black to-blue-900 text-white">
+      <Analytics />
+
       <div className="w-full max-w-2xl">
 
         {/* Title */}
