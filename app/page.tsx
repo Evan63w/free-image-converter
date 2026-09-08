@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
+import { event, pageview } from './gtag';
 
 const ALL_FORMATS = ['png', 'jpg', 'webp'];
 
@@ -17,6 +18,10 @@ export default function Home() {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    pageview(window.location.pathname);
+  }, []);
+
   // close dropdown if clicking outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -29,6 +34,13 @@ export default function Home() {
   }, []);
 
   const handleFile = (selected: File) => {
+    event({
+      action: 'image_uploaded',
+      category: 'engagement',
+      label: selected.name,
+      value: Math.round((selected.size ?? 0) / 1024),
+    });
+
     setFile(selected);
     setDownloadUrl('');
     setTargetType('png');
@@ -38,6 +50,13 @@ export default function Home() {
     if (!file || !targetType) return;
 
     setIsConverting(true);
+
+    event({
+      action: 'image_conversion_started',
+      category: 'conversion',
+      label: targetType,
+      value: Math.round((file.size ?? 0) / 1024),
+    });
 
     const image = new Image();
     image.src = URL.createObjectURL(file);
@@ -55,13 +74,37 @@ export default function Home() {
         const mimeType = `image/${targetType}`;
 
         canvas.toBlob((blob) => {
-          if (!blob) return;
+          if (!blob) {
+            event({
+              action: 'image_conversion_failed',
+              category: 'conversion',
+              label: targetType,
+            });
+            setIsConverting(false);
+            return;
+          }
 
           const url = URL.createObjectURL(blob);
           setDownloadUrl(url);
           setIsConverting(false);
+
+          event({
+            action: 'image_conversion_completed',
+            category: 'conversion',
+            label: targetType,
+            value: Math.round((blob.size ?? 0) / 1024),
+          });
         }, mimeType);
       }, 800);
+    };
+
+    image.onerror = () => {
+      event({
+        action: 'image_conversion_failed',
+        category: 'conversion',
+        label: targetType,
+      });
+      setIsConverting(false);
     };
   };
 
@@ -197,6 +240,13 @@ export default function Home() {
             <a
               href={downloadUrl}
               download={`converted.${targetType}`}
+              onClick={() => {
+                event({
+                  action: 'image_downloaded',
+                  category: 'conversion',
+                  label: targetType,
+                });
+              }}
               className="inline-block px-6 py-3 rounded-2xl bg-green-400 text-black font-bold shadow-lg hover:scale-105 transition"
             >
               Download File ⬇️
