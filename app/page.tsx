@@ -1,256 +1,42 @@
-'use client';
-
-import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { event, pageview } from './gtag';
-
-const ALL_FORMATS = ['png', 'jpg', 'webp'];
+import ImageConverter from './components/ImageConverter';
+import Link from 'next/link';
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
-  const [targetType, setTargetType] = useState('png');
-  const [isConverting, setIsConverting] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState('');
-
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    pageview(window.location.pathname);
-  }, []);
-
-  // close dropdown if clicking outside
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (!dropdownRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
-  }, []);
-
-  const handleFile = (selected: File) => {
-    event({
-      action: 'image_uploaded',
-      category: 'engagement',
-      label: selected.name,
-      value: Math.round((selected.size ?? 0) / 1024),
-    });
-
-    setFile(selected);
-    setDownloadUrl('');
-    setTargetType('png');
-  };
-
-  const convertImage = async () => {
-    if (!file || !targetType) return;
-
-    setIsConverting(true);
-
-    event({
-      action: 'image_conversion_started',
-      category: 'conversion',
-      label: targetType,
-      value: Math.round((file.size ?? 0) / 1024),
-    });
-
-    const image = new Image();
-    image.src = URL.createObjectURL(file);
-
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      canvas.width = image.width;
-      canvas.height = image.height;
-
-      ctx?.drawImage(image, 0, 0);
-
-      setTimeout(() => {
-        const mimeType = `image/${targetType}`;
-
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            event({
-              action: 'image_conversion_failed',
-              category: 'conversion',
-              label: targetType,
-            });
-            setIsConverting(false);
-            return;
-          }
-
-          const url = URL.createObjectURL(blob);
-          setDownloadUrl(url);
-          setIsConverting(false);
-
-          event({
-            action: 'image_conversion_completed',
-            category: 'conversion',
-            label: targetType,
-            value: Math.round((blob.size ?? 0) / 1024),
-          });
-        }, mimeType);
-      }, 800);
-    };
-
-    image.onerror = () => {
-      event({
-        action: 'image_conversion_failed',
-        category: 'conversion',
-        label: targetType,
-      });
-      setIsConverting(false);
-    };
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Free Online Image Converter",
+    url: "https://www.freeimageconverterfree.xyz/",
+    applicationCategory: "MultimediaApplication",
+    operatingSystem: "Any",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    featureList: "PNG, JPG, and WEBP conversion; batch conversion; resizing; quality control",
   };
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-purple-900 via-black to-blue-900 text-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <div className="w-full max-w-2xl">
 
-        {/* Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-5xl font-extrabold text-center mb-3 bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 text-transparent bg-clip-text"
-        >
+        <h1 className="text-5xl font-extrabold text-center mb-3 bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 text-transparent bg-clip-text">
           Free Online Image Converter
-        </motion.h1>
+        </h1>
 
         <p className="text-center text-zinc-300 mb-10">
           Convert PNG, JPG, and WEBP images instantly. Free, private, and no uploads.
         </p>
 
-        {/* Upload */}
-        <div
-          onClick={() => inputRef.current?.click()}
-          className="cursor-pointer border border-white/20 bg-white/10 backdrop-blur-lg rounded-3xl p-12 text-center shadow-2xl hover:scale-[1.02] transition"
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleFile(f);
-            }}
-          />
+        <ImageConverter />
 
-          {!file ? (
-            <>
-              <div className="text-6xl mb-4">📁</div>
-              <p className="text-lg font-semibold">Click to upload image</p>
-              <p className="text-zinc-300 text-sm mt-2">
-                PNG, JPG, WEBP supported
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="text-5xl mb-3">✅</div>
-              <p className="font-semibold">{file.name}</p>
-              <p className="text-sm text-zinc-300 mt-1">Ready to convert</p>
-            </>
-          )}
-        </div>
-
-        {/* Controls */}
-        {file && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-8 bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6"
-          >
-
-            {/* CUSTOM DROPDOWN */}
-            <div ref={dropdownRef} className="relative w-full md:w-48">
-              <p className="text-sm text-zinc-300 mb-2">Convert to:</p>
-
-              <button
-                onClick={() => setOpen(!open)}
-                className="
-                  w-full flex justify-between items-center
-                  bg-white text-black px-4 py-3 rounded-xl
-                  shadow-md hover:shadow-lg transition
-                "
-              >
-                <span>{targetType.toUpperCase()}</span>
-                <span className="text-sm">▼</span>
-              </button>
-
-              {open && (
-                <div className="
-                  absolute mt-2 w-full
-                  bg-white text-black
-                  rounded-xl shadow-xl
-                  overflow-hidden z-50
-                ">
-                  {ALL_FORMATS.map((fmt) => (
-                    <div
-                      key={fmt}
-                      onClick={() => {
-                        setTargetType(fmt);
-                        setOpen(false);
-                      }}
-                      className="
-                        px-4 py-3 hover:bg-gray-100 cursor-pointer
-                      "
-                    >
-                      {fmt.toUpperCase()}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Convert Button */}
-            <button
-              onClick={convertImage}
-              disabled={isConverting}
-              className="
-                px-6 py-3 rounded-2xl font-bold
-                bg-gradient-to-r from-pink-500 to-purple-500
-                hover:opacity-90 transition shadow-lg
-                w-full md:w-auto
-              "
-            >
-              Convert 🚀
-            </button>
-
-          </motion.div>
-        )}
-
-        {/* Loading */}
-        {isConverting && (
-          <div className="mt-8 text-center">
-            <div className="animate-spin text-4xl mb-3">⚙️</div>
-            <p className="text-zinc-300">Converting image...</p>
-          </div>
-        )}
-
-        {/* Download */}
-        {downloadUrl && (
-          <div className="mt-8 text-center">
-            <a
-              href={downloadUrl}
-              download={`converted.${targetType}`}
-              onClick={() => {
-                event({
-                  action: 'image_downloaded',
-                  category: 'conversion',
-                  label: targetType,
-                });
-              }}
-              className="inline-block px-6 py-3 rounded-2xl bg-green-400 text-black font-bold shadow-lg hover:scale-105 transition"
-            >
-              Download File ⬇️
-            </a>
-          </div>
-        )}
-
+        <nav aria-label="Helpful pages" className="mt-12 flex flex-wrap justify-center gap-x-5 gap-y-3 text-sm text-pink-200">
+          <Link href="/convert/png-to-jpg" className="hover:text-white">PNG to JPG</Link>
+          <Link href="/convert/jpg-to-png" className="hover:text-white">JPG to PNG</Link>
+          <Link href="/convert/webp-to-png" className="hover:text-white">WEBP to PNG</Link>
+          <Link href="/convert/webp-to-jpg" className="hover:text-white">WEBP to JPG</Link>
+          <Link href="/faq" className="hover:text-white">FAQ</Link>
+          <Link href="/how-it-works" className="hover:text-white">How it works</Link>
+          <Link href="/privacy" className="hover:text-white">Privacy</Link>
+        </nav>
       </div>
     </main>
   );
