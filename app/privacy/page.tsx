@@ -17,7 +17,7 @@ export default function PrivacyPage() {
                 <h2 className="mt-10 text-2xl font-bold">Analytics</h2>
                 <p className="mt-3 leading-7 text-zinc-300">If enabled, Google Analytics may collect standard usage information such as page views and interaction events. This helps improve the tool. No image contents are sent to analytics.</p>
                 <h2 className="mt-10 text-2xl font-bold">Contact</h2>
-                <p className="mt-3 leading-7 text-zinc-300">For questions about this policy, contact the site owner through the project repository.</p>
+                <p className="mt-3 leading-7 text-zinc-300">For questions about this policy, contact the site owner through the project repository: https://github.com/Evan63w/free-image-converter.</p>
             </article>
         </main>
     );
