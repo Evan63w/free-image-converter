@@ -22,11 +22,13 @@ export const event = ({
     category,
     label,
     value,
+    parameters,
 }: {
     action: string;
     category?: string;
     label?: string;
     value?: number;
+    parameters?: Record<string, string | number | boolean>;
 }) => {
     if (!GA_MEASUREMENT_ID || typeof window === 'undefined' || !window.gtag) {
         return;
@@ -36,5 +38,6 @@ export const event = ({
         event_category: category,
         event_label: label,
         value,
+        ...parameters,
     });
 };

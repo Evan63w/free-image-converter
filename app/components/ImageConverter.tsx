@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { event, pageview } from '../gtag';
+import { event as analyticsEvent, pageview } from '../gtag';
 
 export type Format = 'png' | 'jpg' | 'webp';
 
@@ -23,6 +23,13 @@ const mimeTypes: Record<Format, string> = {
     jpg: 'image/jpeg',
     webp: 'image/webp',
 };
+
+function fileFormat(file: File): string {
+    if (file.type === 'image/jpeg') return 'jpg';
+    if (file.type === 'image/png') return 'png';
+    if (file.type === 'image/webp') return 'webp';
+    return 'other';
+}
 
 function outputName(name: string, format: Format) {
     return `${name.replace(/\.[^/.]+$/, '')}.${format}`;
@@ -51,11 +58,14 @@ export default function ImageConverter({ initialTarget = 'png' }: ImageConverter
         const imageFiles = Array.from(selectedFiles).filter((file) => file.type.startsWith('image/'));
         if (!imageFiles.length) return;
 
-        event({
+        analyticsEvent({
             action: 'image_uploaded',
             category: 'engagement',
-            label: imageFiles.length > 1 ? 'multiple' : imageFiles[0].name,
             value: Math.round(imageFiles.reduce((total, file) => total + file.size, 0) / 1024),
+            parameters: {
+                file_count: imageFiles.length,
+                source_format: imageFiles.length === 1 ? fileFormat(imageFiles[0]) : 'mixed',
+            },
         });
         setFiles(imageFiles);
         setConvertedFiles([]);
@@ -100,24 +110,67 @@ export default function ImageConverter({ initialTarget = 'png' }: ImageConverter
         if (!files.length) return;
         setIsConverting(true);
         setConvertedFiles([]);
-        event({
+        analyticsEvent({
             action: 'image_conversion_started',
             category: 'conversion',
             label: targetType,
             value: files.length,
+            parameters: {
+                file_count: files.length,
+                source_format: files.length === 1 ? fileFormat(files[0]) : 'mixed',
+                target_format: targetType,
+                resize_enabled: Boolean(width || height),
+                quality: targetType === 'png' ? 100 : quality,
+            },
         });
+
+        if (files.length > 1) {
+            analyticsEvent({
+                action: 'batch_conversion_used',
+                category: 'conversion',
+                parameters: { file_count: files.length, target_format: targetType },
+            });
+        }
+
+        if (width || height) {
+            analyticsEvent({
+                action: 'resize_used',
+                category: 'conversion',
+                parameters: {
+                    width: Number(width) || 0,
+                    height: Number(height) || 0,
+                },
+            });
+        }
+
+        if (targetType !== 'png' && quality !== 90) {
+            analyticsEvent({
+                action: 'quality_adjusted',
+                category: 'conversion',
+                parameters: { quality, target_format: targetType },
+            });
+        }
 
         try {
             const results = await Promise.all(files.map(convertFile));
             setConvertedFiles(results);
-            event({
+            analyticsEvent({
                 action: 'image_conversion_completed',
                 category: 'conversion',
                 label: targetType,
                 value: results.reduce((total, result) => total + result.size, 0),
+                parameters: {
+                    file_count: results.length,
+                    target_format: targetType,
+                },
             });
         } catch {
-            event({ action: 'image_conversion_failed', category: 'conversion', label: targetType });
+            analyticsEvent({
+                action: 'image_conversion_failed',
+                category: 'conversion',
+                label: targetType,
+                parameters: { file_count: files.length, target_format: targetType },
+            });
         } finally {
             setIsConverting(false);
         }
@@ -162,7 +215,16 @@ export default function ImageConverter({ initialTarget = 'png' }: ImageConverter
                     <div className="grid gap-5 md:grid-cols-2">
                         <label className="text-sm text-zinc-300">
                             Convert to
-                            <select value={targetType} onChange={(event) => setTargetType(event.target.value as Format)} className="mt-2 w-full rounded-xl bg-white px-4 py-3 text-black">
+                            <select value={targetType} onChange={(event) => {
+                                const nextTarget = event.target.value as Format;
+                                setTargetType(nextTarget);
+                                analyticsEvent({
+                                    action: 'format_selected',
+                                    category: 'conversion',
+                                    label: nextTarget,
+                                    parameters: { target_format: nextTarget },
+                                });
+                            }} className="mt-2 w-full rounded-xl bg-white px-4 py-3 text-black">
                                 {formats.map((format) => <option key={format} value={format}>{format.toUpperCase()}</option>)}
                             </select>
                         </label>
@@ -188,7 +250,7 @@ export default function ImageConverter({ initialTarget = 'png' }: ImageConverter
             {convertedFiles.length > 0 && (
                 <div className="mt-8 space-y-3">
                     {convertedFiles.map((file) => (
-                        <a key={file.url} href={file.url} download={file.name} onClick={() => event({ action: 'image_downloaded', category: 'conversion', label: targetType })} className="flex items-center justify-between rounded-2xl bg-green-400 px-5 py-4 font-bold text-black shadow-lg transition hover:scale-[1.01]">
+                        <a key={file.url} href={file.url} download={file.name} onClick={() => analyticsEvent({ action: 'image_downloaded', category: 'conversion', label: targetType, parameters: { target_format: targetType, file_count: convertedFiles.length } })} className="flex items-center justify-between rounded-2xl bg-green-400 px-5 py-4 font-bold text-black shadow-lg transition hover:scale-[1.01]">
                             <span className="truncate pr-4">{file.name}</span>
                             <span>Download</span>
                         </a>
