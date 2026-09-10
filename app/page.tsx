@@ -117,11 +117,11 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           className="text-5xl font-extrabold text-center mb-3 bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 text-transparent bg-clip-text"
         >
-          Image Converter
+          Free Online Image Converter
         </motion.h1>
 
         <p className="text-center text-zinc-300 mb-10">
-          Fast in-browser conversion ✨ No uploads
+          Convert PNG, JPG, and WEBP images instantly. Free, private, and no uploads.
         </p>
 
         {/* Upload */}

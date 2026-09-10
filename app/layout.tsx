@@ -16,8 +16,34 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Image Converter",
-  description: "Convert images locally in your browser",
+  metadataBase: new URL("https://www.freeimageconverterfree.xyz"),
+  title: "Free Online Image Converter | PNG, JPG & WEBP",
+  description:
+    "Convert images between PNG, JPG, and WEBP formats instantly in your browser. Free, private, and no uploads required.",
+  keywords: [
+    "free image converter",
+    "online image converter",
+    "PNG converter",
+    "JPG converter",
+    "WEBP converter",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Free Online Image Converter",
+    description:
+      "Convert PNG, JPG, and WEBP images instantly. Free, private, and no uploads.",
+    url: "https://www.freeimageconverterfree.xyz",
+    siteName: "Free Image Converter",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Free Online Image Converter",
+    description:
+      "Convert PNG, JPG, and WEBP images instantly in your browser.",
+  },
 };
 
 export default function RootLayout({
